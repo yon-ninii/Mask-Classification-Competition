@@ -1,0 +1,58 @@
+{
+    "name": "efficientnet-b4-freeze",
+    "n_gpu": 1,
+
+    "arch": {
+        "type": "efficientnet-b4",
+        "args": {
+            "num_classes":18,
+            "Freeze_layers":15
+        }
+    },
+    "data_loader": {
+        "type": "MaskDataLoader",
+        "args":{
+            "data_dir": "/opt/ml/input/data",
+            "batch_size": 256,
+            "shuffle": true,
+            "validation_split": 0.1,
+            "num_workers": 4
+        }
+    },
+    "cutmix": {
+        "type": true,
+        "beta": 1.0,
+        "prob": 0.4
+    },
+    "optimizer": {
+        "type": "Adam",
+        "args":{
+            "lr": 0.0003,
+            "weight_decay": 0,
+            "amsgrad": true
+        }
+    },
+    "loss": "F1_loss",
+    "metrics": [
+        "accuracy", "f1_score"
+    ],
+    "lr_scheduler": {
+        "type": "StepLR",
+        "args": {
+            "step_size": 10,
+            "gamma": 0.3
+        }
+    },
+    "trainer": {
+        "epochs": 40,
+        "run_name": "ENet-b0-freeze15",
+        "save_dir": "saved/",
+        "save_period": 2,
+        "verbosity": 2,
+        
+        "monitor": "min val_loss",
+        "early_stop": 10,
+
+        "tensorboard": false
+    }
+}
