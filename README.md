@@ -35,7 +35,8 @@
         - 한 사람당 사진의 개수: 7 [마스크 착용 5장, 이상하게 착용 1장, 미착용 1장]
         - 이미지 크기: (384, 512)
         - 60% 의 사람이 학습 데이터로 사용된다.
-    **Class Description**
+
+**Class Description**
 
 ![class description](Image/Class.png)
 
