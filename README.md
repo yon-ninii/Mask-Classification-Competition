@@ -1,405 +1,195 @@
-# pstage_01_image_classification
-
-## Getting Started    
-### Dependencies
-- torch==1.6.0
-- torchvision==0.7.0                                                              
-
-### [PyTorch Template](https://github.com/lukemelas/EfficientNet-PyTorch)
-
-# 10월25일 화요일 피어세션
-
-## Baseline 실험 목록
-
-- [TorchVision](https://pytorch.org/vision/stable/models/generated/torchvision.models.efficientnet_b7.html?highlight=efficientnet#torchvision.models.efficientnet_b7) → EfficientNet-B7 : 1 이강희님
-- [mmClassification](https://mmclassification.readthedocs.io/en/latest/papers/efficientnet.html) → EfficientNet-B7 : 2 함수민, 최휘준 님
-- [Implemented EfficientNet-B7](https://github.com/lukemelas/EfficientNet-PyTorch/blob/master/efficientnet_pytorch/model.py) : 2 박용민, 정상헌님
-
-### Hyperparameter
-
-| Learning Rate | Epoch | Batch Size | SE | Scheduler | loss | Transform | label | optimizer | Aug |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 0.001 | 15 | 32 | OK | step-LR | CE | ToTensor | 18 (Multi-class) | Adam | centercrop(320x256) |
-
-
----
-#### 아래는 EfficientNet 구현 Repo의 README
-
-# PyTorch Template Project
-PyTorch deep learning project made easy.
-
-<!-- @import "[TOC]" {cmd="toc" depthFrom=1 depthTo=6 orderedList=false} -->
-
-<!-- code_chunk_output -->
-
-* [PyTorch Template Project](#pytorch-template-project)
-	* [Requirements](#requirements)
-	* [Features](#features)
-	* [Folder Structure](#folder-structure)
-	* [Usage](#usage)
-		* [Config file format](#config-file-format)
-		* [Using config files](#using-config-files)
-		* [Resuming from checkpoints](#resuming-from-checkpoints)
-    * [Using Multiple GPU](#using-multiple-gpu)
-	* [Customization](#customization)
-		* [Custom CLI options](#custom-cli-options)
-		* [Data Loader](#data-loader)
-		* [Trainer](#trainer)
-		* [Model](#model)
-		* [Loss](#loss)
-		* [metrics](#metrics)
-		* [Additional logging](#additional-logging)
-		* [Validation data](#validation-data)
-		* [Checkpoints](#checkpoints)
-    * [Tensorboard Visualization](#tensorboard-visualization)
-	* [Contribution](#contribution)
-	* [TODOs](#todos)
-	* [License](#license)
-	* [Acknowledgements](#acknowledgements)
-
-<!-- /code_chunk_output -->
-
-## Requirements
-* Python >= 3.5 (3.6 recommended)
-* PyTorch >= 0.4 (1.2 recommended)
-* tqdm (Optional for `test.py`)
-* tensorboard >= 1.14 (see [Tensorboard Visualization](#tensorboard-visualization))
-
-## Features
-* Clear folder structure which is suitable for many deep learning projects.
-* `.json` config file support for convenient parameter tuning.
-* Customizable command line options for more convenient parameter tuning.
-* Checkpoint saving and resuming.
-* Abstract base classes for faster development:
-  * `BaseTrainer` handles checkpoint saving/resuming, training process logging, and more.
-  * `BaseDataLoader` handles batch generation, data shuffling, and validation data splitting.
-  * `BaseModel` provides basic model summary.
-
-## Folder Structure
-  ```
-  pytorch-template/
-  │
-  ├── train.py - main script to start training
-  ├── test.py - evaluation of trained model
-  │
-  ├── config.json - holds configuration for training
-  ├── parse_config.py - class to handle config file and cli options
-  │
-  ├── new_project.py - initialize new project with template files
-  │
-  ├── base/ - abstract base classes
-  │   ├── base_data_loader.py
-  │   ├── base_model.py
-  │   └── base_trainer.py
-  │
-  ├── data_loader/ - anything about data loading goes here
-  │   └── data_loaders.py
-  │
-  ├── data/ - default directory for storing input data
-  │
-  ├── model/ - models, losses, and metrics
-  │   ├── model.py
-  │   ├── metric.py
-  │   └── loss.py
-  │
-  ├── saved/
-  │   ├── models/ - trained models are saved here
-  │   └── log/ - default logdir for tensorboard and logging output
-  │
-  ├── trainer/ - trainers
-  │   └── trainer.py
-  │
-  ├── logger/ - module for tensorboard visualization and logging
-  │   ├── visualization.py
-  │   ├── logger.py
-  │   └── logger_config.json
-  │  
-  └── utils/ - small utility functions
-      ├── util.py
-      └── ...
-  ```
-
-## Usage
-The code in this repo is an MNIST example of the template.
-Try `python train.py -c config.json` to run code.
-
-### Config file format
-Config files are in `.json` format:
-```javascript
-{
-  "name": "Mnist_LeNet",        // training session name
-  "n_gpu": 1,                   // number of GPUs to use for training.
-  
-  "arch": {
-    "type": "MnistModel",       // name of model architecture to train
-    "args": {
-
-    }                
-  },
-  "data_loader": {
-    "type": "MnistDataLoader",         // selecting data loader
-    "args":{
-      "data_dir": "data/",             // dataset path
-      "batch_size": 64,                // batch size
-      "shuffle": true,                 // shuffle training data before splitting
-      "validation_split": 0.1          // size of validation dataset. float(portion) or int(number of samples)
-      "num_workers": 2,                // number of cpu processes to be used for data loading
-    }
-  },
-  "optimizer": {
-    "type": "Adam",
-    "args":{
-      "lr": 0.001,                     // learning rate
-      "weight_decay": 0,               // (optional) weight decay
-      "amsgrad": true
-    }
-  },
-  "loss": "nll_loss",                  // loss
-  "metrics": [
-    "accuracy", "top_k_acc"            // list of metrics to evaluate
-  ],                         
-  "lr_scheduler": {
-    "type": "StepLR",                  // learning rate scheduler
-    "args":{
-      "step_size": 50,          
-      "gamma": 0.1
-    }
-  },
-  "trainer": {
-    "epochs": 100,                     // number of training epochs
-    "save_dir": "saved/",              // checkpoints are saved in save_dir/models/name
-    "save_freq": 1,                    // save checkpoints every save_freq epochs
-    "verbosity": 2,                    // 0: quiet, 1: per epoch, 2: full
-  
-    "monitor": "min val_loss"          // mode and metric for model performance monitoring. set 'off' to disable.
-    "early_stop": 10	                 // number of epochs to wait before early stop. set 0 to disable.
-  
-    "tensorboard": true,               // enable tensorboard visualization
-  }
-}
-```
-
-Add addional configurations if you need.
-
-### Using config files
-Modify the configurations in `.json` config files, then run:
-
-  ```
-  python train.py --config config.json
-  ```
-
-### Resuming from checkpoints
-You can resume from a previously saved checkpoint by:
-
-  ```
-  python train.py --resume path/to/checkpoint
-  ```
-
-### Using Multiple GPU
-You can enable multi-GPU training by setting `n_gpu` argument of the config file to larger number.
-If configured to use smaller number of gpu than available, first n devices will be used by default.
-Specify indices of available GPUs by cuda environmental variable.
-  ```
-  python train.py --device 2,3 -c config.json
-  ```
-  This is equivalent to
-  ```
-  CUDA_VISIBLE_DEVICES=2,3 python train.py -c config.py
-  ```
-
-## Customization
-
-### Project initialization
-Use the `new_project.py` script to make your new project directory with template files.
-`python new_project.py ../NewProject` then a new project folder named 'NewProject' will be made.
-This script will filter out unneccessary files like cache, git files or readme file. 
-
-### Custom CLI options
-
-Changing values of config file is a clean, safe and easy way of tuning hyperparameters. However, sometimes
-it is better to have command line options if some values need to be changed too often or quickly.
-
-This template uses the configurations stored in the json file by default, but by registering custom options as follows
-you can change some of them using CLI flags.
-
-  ```python
-  # simple class-like object having 3 attributes, `flags`, `type`, `target`.
-  CustomArgs = collections.namedtuple('CustomArgs', 'flags type target')
-  options = [
-      CustomArgs(['--lr', '--learning_rate'], type=float, target=('optimizer', 'args', 'lr')),
-      CustomArgs(['--bs', '--batch_size'], type=int, target=('data_loader', 'args', 'batch_size'))
-      # options added here can be modified by command line flags.
-  ]
-  ```
-`target` argument should be sequence of keys, which are used to access that option in the config dict. In this example, `target` 
-for the learning rate option is `('optimizer', 'args', 'lr')` because `config['optimizer']['args']['lr']` points to the learning rate.
-`python train.py -c config.json --bs 256` runs training with options given in `config.json` except for the `batch size`
-which is increased to 256 by command line options.
-
-
-### Data Loader
-* **Writing your own data loader**
-
-1. **Inherit ```BaseDataLoader```**
-
-    `BaseDataLoader` is a subclass of `torch.utils.data.DataLoader`, you can use either of them.
-
-    `BaseDataLoader` handles:
-    * Generating next batch
-    * Data shuffling
-    * Generating validation data loader by calling
-    `BaseDataLoader.split_validation()`
-
-* **DataLoader Usage**
-
-  `BaseDataLoader` is an iterator, to iterate through batches:
-  ```python
-  for batch_idx, (x_batch, y_batch) in data_loader:
-      pass
-  ```
-* **Example**
-
-  Please refer to `data_loader/data_loaders.py` for an MNIST data loading example.
-
-### Trainer
-* **Writing your own trainer**
-
-1. **Inherit ```BaseTrainer```**
-
-    `BaseTrainer` handles:
-    * Training process logging
-    * Checkpoint saving
-    * Checkpoint resuming
-    * Reconfigurable performance monitoring for saving current best model, and early stop training.
-      * If config `monitor` is set to `max val_accuracy`, which means then the trainer will save a checkpoint `model_best.pth` when `validation accuracy` of epoch replaces current `maximum`.
-      * If config `early_stop` is set, training will be automatically terminated when model performance does not improve for given number of epochs. This feature can be turned off by passing 0 to the `early_stop` option, or just deleting the line of config.
-
-2. **Implementing abstract methods**
-
-    You need to implement `_train_epoch()` for your training process, if you need validation then you can implement `_valid_epoch()` as in `trainer/trainer.py`
-
-* **Example**
-
-  Please refer to `trainer/trainer.py` for MNIST training.
-
-* **Iteration-based training**
-
-  `Trainer.__init__` takes an optional argument, `len_epoch` which controls number of batches(steps) in each epoch.
-
-### Model
-* **Writing your own model**
-
-1. **Inherit `BaseModel`**
-
-    `BaseModel` handles:
-    * Inherited from `torch.nn.Module`
-    * `__str__`: Modify native `print` function to prints the number of trainable parameters.
-
-2. **Implementing abstract methods**
-
-    Implement the foward pass method `forward()`
-
-* **Example**
-
-  Please refer to `model/model.py` for a LeNet example.
-
-### Loss
-Custom loss functions can be implemented in 'model/loss.py'. Use them by changing the name given in "loss" in config file, to corresponding name.
-
-### Metrics
-Metric functions are located in 'model/metric.py'.
-
-You can monitor multiple metrics by providing a list in the configuration file, e.g.:
-  ```json
-  "metrics": ["accuracy", "top_k_acc"],
-  ```
-
-### Additional logging
-If you have additional information to be logged, in `_train_epoch()` of your trainer class, merge them with `log` as shown below before returning:
-
-  ```python
-  additional_log = {"gradient_norm": g, "sensitivity": s}
-  log.update(additional_log)
-  return log
-  ```
-
-### Testing
-You can test trained model by running `test.py` passing path to the trained checkpoint by `--resume` argument.
-
-### Validation data
-To split validation data from a data loader, call `BaseDataLoader.split_validation()`, then it will return a data loader for validation of size specified in your config file.
-The `validation_split` can be a ratio of validation set per total data(0.0 <= float < 1.0), or the number of samples (0 <= int < `n_total_samples`).
-
-**Note**: the `split_validation()` method will modify the original data loader
-**Note**: `split_validation()` will return `None` if `"validation_split"` is set to `0`
-
-### Checkpoints
-You can specify the name of the training session in config files:
-  ```json
-  "name": "MNIST_LeNet",
-  ```
-
-The checkpoints will be saved in `save_dir/name/timestamp/checkpoint_epoch_n`, with timestamp in mmdd_HHMMSS format.
-
-A copy of config file will be saved in the same folder.
-
-**Note**: checkpoints contain:
-  ```python
-  {
-    'arch': arch,
-    'epoch': epoch,
-    'state_dict': self.model.state_dict(),
-    'optimizer': self.optimizer.state_dict(),
-    'monitor_best': self.mnt_best,
-    'config': self.config
-  }
-  ```
-
-### Tensorboard Visualization
-This template supports Tensorboard visualization by using either  `torch.utils.tensorboard` or [TensorboardX](https://github.com/lanpa/tensorboardX).
-
-1. **Install**
-
-    If you are using pytorch 1.1 or higher, install tensorboard by 'pip install tensorboard>=1.14.0'.
-
-    Otherwise, you should install tensorboardx. Follow installation guide in [TensorboardX](https://github.com/lanpa/tensorboardX).
-
-2. **Run training** 
-
-    Make sure that `tensorboard` option in the config file is turned on.
-
+# 랩업 리포트
+
+# Part 1. [팀] 프로젝트 Wrap Up
+
+## 1-1. 프로젝트 개요
+
+- 프로젝트 주제
+    - 마스크 이미지 분류 ( 성별/ 나이/ 마스크 )
+- 프로젝트 개요(프로젝트 구현 내용, 컨셉, 교육 내용과의 관련성 등)
+    - EfficientNet을 활용한 이미지 분류 대회
+- 활용 장비 및 재료(개발 환경, 협업 tool 등)
+    - GPU : V100
+    - 개발 Tool : Visual Studio Code, Jupyter Lab
+    - 협업 Tool : Git, Slack, Notion
+- 프로젝트 구조 및 사용 데이터셋의 구조도(연관도)
+    - pytorch-template 기반의 프로젝트 [[GitHub 링크](https://github.com/boostcampaitech4cv1/level1_imageclassification_cv-level1-cv-01)]
+    
     ```
-     "tensorboard" : true
+    project/
+    │
+    ├── train.py - 모델 학습 코드
+    ├── test.py - submission.csv 생성 코드
+    │
+    ├── configs/ - 학습/추론 설정 모음
+    │
+    ├── data_loader/ - 데이터 셋 관련 코드
+    │
+    ├── model/ - 모델 관련 코드
+    │
+    └── saved/ - 학습 로그 저장 디렉토리
     ```
+    
+    - 데이터셋 설명
+        - 전체 사람 명 수 : 4,500
+        - 한 사람당 사진의 개수: 7 [마스크 착용 5장, 이상하게 착용 1장, 미착용 1장]
+        - 이미지 크기: (384, 512)
+        - 60% 의 사람이 학습 데이터로 사용된다.
+    
+    ```
+    data/
+    │
+    ├── train/ - 학습 데이터 디렉토리
+    │   ├── train.csv - meta 데이터
+    │   └── images/
+    │       └── [인물 ID]/ - 이미지 파일 디렉토리
+    │
+    └── eval/ - 평가 데이터 디렉토리
+    ```
+    
+- 기대 효과
+    - 위생이 민감한 병원이나, 펜데믹 상황에 건물 출입 시스템에 사용하거나, 마스크 착용 여부를 모니터링할 수 있다.
 
-3. **Open Tensorboard server** 
+## 1-2. 프로젝트 팀 구성 및 역할 (팀원 별로 주도적으로 참여한 부분을 중심으로 간략히 작성)
 
-    Type `tensorboard --logdir saved/log/` at the project root, then server will open at `http://localhost:6006`
+**이강희(팀장)**: 팀의 기본적인 목표 설정 및 협업 리딩, MultiHead 실험
 
-By default, values of loss and metrics specified in config file, input images, and histogram of model parameters will be logged.
-If you need more visualizations, use `add_scalar('tag', data)`, `add_image('tag', image)`, etc in the `trainer._train_epoch` method.
-`add_something()` methods in this template are basically wrappers for those of `tensorboardX.SummaryWriter` and `torch.utils.tensorboard.SummaryWriter` modules. 
+**박용민(팀원)**: CutMix 실험, Loss 실험, 모델 설계 및 실험, 모델 튜닝
 
-**Note**: You don't have to specify current steps, since `WriterTensorboard` class defined at `logger/visualization.py` will track current steps.
+**최휘준(팀원)**: mmcls 조사, ThreeModel 실험, Data Augmentation
 
-## Contribution
-Feel free to contribute any kind of function or enhancement, here the coding style follows PEP8
+**정상헌(팀원)**: ensemble 실험, Class Imbalance 해결, Fine Tuning 실험
 
-Code should pass the [Flake8](http://flake8.pycqa.org/en/latest/) check before committing.
+**함수민(팀원)**: mmcls 조사, data augmentation 실험, Focal Loss 구현 및 실험
 
-## TODOs
+## 1-3. 프로젝트 수행 절차 및 방법
 
-- [ ] Multiple optimizers
-- [ ] Support more tensorboard functions
-- [x] Using fixed random seed
-- [x] Support pytorch native tensorboard
-- [x] `tensorboardX` logger support
-- [x] Configurable logging layout, checkpoint naming
-- [x] Iteration-based training (instead of epoch-based)
-- [x] Adding command line option for fine-tuning
+- 프로젝트의 사전 기획과 프로젝트 수행 및 완료 과정으로 나누어서 작성합니다.
 
-## License
-This project is licensed under the MIT License. See  LICENSE for more details
+| 10/24 (월) | 10/25 (화) | 10/26 (수) | 10/27 (목) | 10/28 (금) |
+| --- | --- | --- | --- | --- |
+| 서버 세팅 | 베이스라인 작성 | 데이터 분석 | augmentation | augmentation |
 
-## Acknowledgements
-This project is inspired by the project [Tensorflow-Project-Template](https://github.com/MrGemy95/Tensorflow-Project-Template) by [Mahmoud Gemy](https://github.com/MrGemy95)
+| 10/31 (월) | 11/1 (화) | 11/2 (수) | 11/3 (목) | 11/4 (금) |
+| --- | --- | --- | --- | --- |
+| 오버피팅, Imbalance | 오버피팅, Imbalance | 하이퍼파라미터 튜닝 | 앙상블 | wrap-up report |
+
+**실험 결과를 일부 정리한 페이지**
+
+## 1-4. 프로젝트 수행 결과
+
+- 프로젝트 결과물이 도출된 과정을 세부적으로 기록합니다.
+- 활용된 기술(구현 방법), 핵심 기능, 검증 결과 등을 상세히 기재합니다.
+- 프로젝트의 과정이 잘 드러날 수 있도록 데이터 전처리 과정부터 활용까지 전체적인
+프로세스를 확인할 수 있도록 단계별로 작성하시기 바랍니다. (요약적, 유기적, 논리적으로
+작성할 수 있도록 유의해주세요!)
+    - 탐색적 분석 및 전처리 (학습데이터 소개)
+        
+        ### **데이터** 분석
+        
+        ![나이별 데이터 분포도](Image/Untitled.png)
+        
+        나이별 데이터 분포도
+        
+        ![나이 데이터 분포도](Image/Untitled%201.png)
+        
+        나이 데이터 분포도
+        
+        Age 라벨링
+        
+        - 0≤ Age <30 → 0
+        - 30≤ Age < 60 → 1
+        - 60 == Age → 2
+        
+        ![성별, 나이별 데이터 분포도](Image/Untitled%202.png)
+        
+        성별, 나이별 데이터 분포도
+        
+        ![성별 데이터 분포도](Image/Untitled%203.png)
+        
+        성별 데이터 분포도
+        
+        Gender 라벨링
+        
+        - ‘male’ → 0
+        - ‘female’ → 1
+        
+        ### 데이터 전처리
+        
+        ![60세 augmentation 후 class별 train dataset 분포도](Image/Untitled%204.png)
+        
+        60세 augmentation 후 class별 train dataset 분포도
+        
+        60세 데이터(label : 2)가  비교적 적어서 60세 데이터만 5배 Augmentation(Horizontal Flip, Rotate를 적당히 조합)을 시켜서 실험했다.
+        
+        성능이 개선되지 않고, 60대 데이터에 과적합이 일어나서 Augmentation을 2배(Rotate left, right)만 적용시켰더니 약간의 개선이 있었다.
+        
+        60세 데이터가 부족한게 아니라, 30~59세 데이터 개수와 60세 데이터 개수를 비교하니 당연히 60세 데이터 개수 비율이 적을 수 밖에 없는 것 같다.
+        
+    - 모델 선정 및 분석
+        
+        ### EfficientNet-B4
+        
+        - 모델 선정 이유 :  한번도 사용해보지 못했고, 성능 또한 좋은 모델을 사용해보고자 했기 때문에 EfficientNet계열의 모델을 선정했다.
+        - 모델 분석 및 평가 : 가장 큰 모델이 성능도 좋을 것이라는 판단 하에 b7부터 시작했으나, 모델이 데이터에 완전히 fit하는 경우가 발생하였다. 이를 막고자 b0부터 하나하나 실험을 통해 EfficientNet계열의 모델 중, b4모델로 선택하게 되었다.
+    
+    - 시연 결과
+        - 모델 성능
+            - Public (14등)
+                - F1-Score : 0.7337
+                - Accuracy : 78.2857
+            - Private (11등)
+                - F1-Score : 0.7290
+                - Accuracy : 77.4603
+
+## 1-5. 자체 평가 의견
+
+- 프로젝트 결과물에 대한 프로젝트 의도와의 부합 정도 및 실무활용 가능 정도, 계획 대비 달성도, 완성도 등 자체적인 평가 의견과 느낀점을 포함합니다.
+- 팀 차원에서 잘한 부분과 아쉬운 점을 작성합니다. (팀 별 공통 의견 중심으로 작성하며,
+2~3장 분량을 고려하여 개인적인 의견은 개인 회고 부분에서 작성할 수 있도록 합니다.)
+    - 잘한 점들
+        - PyTorch Project 템플릿을 사용해서 능률을 높일 수 있었다.
+        - 갖고 있는 데이터에만 최적화 하는 것이 아닌 일반화 성능을 위해 노력했기 때문에 private 결과에서는 등수가 좀 올라간 것 같다.
+        - 처음부터 모든 팀원의 방향성이 잘 맞아서 화기애애하게 프로젝트가 진행된 것 같다.
+        - 모두 아침부터 밤 늦게까지 소통이 잘 되었고, 이를 통해 많은 것을 얻어간 것 같다.
+    - 시도 했으나 잘 되지 않았던 것들
+        - CutMix의 코드 작업이 상당히 오래 걸렸는데 생각보다 성능 향상이 크지 않았다.
+        - Augmentation에 대한 실험이 데이터의 통계적 분포를 건드리는 것이기 때문에 한두가지만 바꿔서 여러 실험을 돌려도 정확한 성능 분석이 어려워서 제대로 고르지 못했다.
+        - 마지막에 task를 3개로 나누어서 앙상블과 비슷한 방법으로 따로 classification과 regression을 진행했는데 시간이 부족해서 많이 실험해보지 못했다.
+        - 마찬가지로 시간이 부족해서 optimizer, loss function 등 제대로 시도해보지 못한 여러 실험들이 있었는데 제대로 진행하지 못한 실험이 많았다.
+    - 아쉬웠던 점들
+        - 처음에는 체계적인 실험을 위해 여러 과정과 가설을 정의하고 시작 했지만, 갈 수록 체계가 조금씩 무너졌고 실험 결과가 잘 종합되지 않았다.
+        - 어떤 실험을 정의할 때, 정확한 근거 없이 정의해서 성능이 올라간 후에도 왜 올라 갔는지 깨닫는데 시간이 걸렸다.
+        - 개인별로 git branch를 파서, 깃을 제대로 활용하지 못했다.
+        - 각자 역할을 정하고 시작하지 않아서 약간은 흐지부지 된 경향이 있는 것 같다.
+    - 프로젝트를 통해 배운 점 또는 시사점
+        - 대회를 위해 어떤 순서로 과정을 이어 나가야 하는지 알게 되었다.
+        - 협업을 할 때 전체적인 방향성을 맞추고 시작해야 중간에 잡음이 생기지 않는다는 것을 알게 되었다.
+        - 소통의 중요성을 알게 되었다.
+        - Class Imbalance가 DL Task에서 얼마나 중요하고 어떤 해결 방법들이 있는지 알게 되었다. 또, 왜 Accuracy 만이 아닌 F1-score를 metric으로 사용하는지도 알게 되었다.
+        
+
+# Part 2. [개인] 개인 회고    
+
+- 박용민_T4087
+    - **이번 프로젝트에서 나의 목표는 무엇이었는가?**
+        - 전체적인 팀의 목표 : 우리 팀의 목표는 공부와 이론 학습에 초점을 두었다.
+            - 공동 학습 측면 : 다 같이 최종 목표를 향해 학습을 할 수 있도록 함께 어렵지 않은 짧은 목표들을 잡았다.
+        - 나의 목표 : 나 또한 학습에 초점을 두고 공부를 위주로 목표를 잡았다.
+            - 개인 학습 측면 : 학습을 위해 구글을 적극 활용하고, 새롭게 알게 된 이론들은 정리해두려고 노력했다.
+    - **나는 어떤 방식으로 모델을 개선했는가?**
+        - 구현해보지 않았던 CutMix를 구현하고, 우리 구현 코드에 맞게 수정했다.
+        - 알고 있던 여러 Loss와 방법론을 팀원들에게 제시하고 공유했다.
+        - 여러 실험들을 체계적으로 실천하려고 노력했다.
+    - **전과 비교해서, 내가 새롭게 시도한 변화는 무엇이고, 어떤 효과가 있었는가?**
+        - 모델을 그저 긁어와서 사용하거나 라이브러리를 통해 선언하는 것이 아닌 여러 방향에서 바라보며 다양한 기법을 통해 바꿔보려고 노력했다. → 어느 정도 성능 향상은 있었으나 높은 향상이 없었을 뿐더러 어떤 측면의 한계로 성능 향상이 별로 없었는지, 어떤 측면에서 장점으로 작용해 성능이 향상 되었는지 정확하고 논리적인 분석이 잘 되지 않았다.
+    - **마주한 한계는 무엇이며, 아쉬웠던 점은 무엇인가?**
+        - 가장 아쉬웠던 점은 위에서 언급한 정확하고 논리적인 분석이 잘 되지 않았다는 것이다. 멘토링에서 멘토님 또한 지적해주셨던 부분이다.
+        - 추가로 초반에 EDA부터 시작하지 않았다는 것이 상당히 아쉬웠다. 미리 데이터를 분석하고 시작했다면 시간을 대폭 줄일 수 있었을 것 같고, 어떤 부분을 고쳐야 성능 향상이 일어날 것인지 더 일찍 깨달았을 것 같다.
+        - 체계적인 실험을 위해 이것 저것 정의하고 가설을 세웠지만, 결국 실험을 진행하면서 개인적으로 돌리게 되는 실험이 많아졌고 이로 인해 체계가 조금은 무너진 것 같다. → 실험 결과 종합이 잘 되지 않았다.
+        - 초기에 방향성을 높은 점수가 아닌 공부에 초점을 두고 시작했지만 막상 대회가 시작되니 눈 앞에 보이는 리더보드가 생각 이상으로 신경이 쓰여서 공부에 잘 집중이 되지 않은 것 같다.
+    - **한계/교훈을 바탕으로 다음 P-Stage에서 스스로 새롭게 시도해볼 것은 무엇일까?**
+        - 멘토링에서 멘토님께서 지적해주셨던 부분인 논리적이고 근거가 있는 실험 계획 수립과 가설 수립을 탄탄하게 가져가야 더욱 질 높은 대회 참여가 가능할 것 같다. → 계속해서 서로 질문하고 이게 왜 필요한지, 어떤 부분에서 좋을 것 같은지 논리적인 토론이 필요할 것 같다.
+        - 초기에 방향성을 정했다면 그 방향성을 잃지 않고 끝까지 가거나, 중간에 바뀐다면 팀원들과 다시 한번 상의해봐야 할 것 같다.
+        - 실험에는 체계가 매우 중요하다고 생각한다. P-stage에서는 새로운 팀원들과 체계가 무너졌던 경험을 바탕으로 더 탄탄하고 체계적인 실험을 진행해서 결과를 잘 종합해야 할 것 같다.
+        - 다음 대회가 시작되거나 어떤 Task를 수행할 때, EDA부터 진행하고 이 데이터를 가장 잘 설명할 수 있는 모델을 만들기 위해서는 어떤 방법을 써야할 지 정리를 하고 시작해야 할 것 같다.
