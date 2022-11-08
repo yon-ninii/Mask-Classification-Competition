@@ -7,7 +7,7 @@
 - 프로젝트 주제
     - 마스크 이미지 분류 ( 성별/ 나이/ 마스크 )
 - 프로젝트 개요(프로젝트 구현 내용, 컨셉, 교육 내용과의 관련성 등)
-    - EfficientNet을 활용한 이미지 분류 대회
+    - **EfficientNet**을 활용한 이미지 분류 대회
 - 활용 장비 및 재료(개발 환경, 협업 tool 등)
     - GPU : V100
     - 개발 Tool : Visual Studio Code, Jupyter Lab
@@ -35,7 +35,10 @@
         - 한 사람당 사진의 개수: 7 [마스크 착용 5장, 이상하게 착용 1장, 미착용 1장]
         - 이미지 크기: (384, 512)
         - 60% 의 사람이 학습 데이터로 사용된다.
-    
+    **Class Description**
+
+![class description](Image/Class.png)
+
     ```
     data/
     │
